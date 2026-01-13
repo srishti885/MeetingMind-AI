@@ -13,8 +13,10 @@
     "@emailjs/browser": "^4.4.1",
     "axios": "^1.13.2",
     "form-data": "^4.0.5",
+    "framer-motion": "^12.25.0",
     "groq-sdk": "^0.37.0",
     "jspdf": "^4.0.0",
+    "lucide-react": "^0.562.0",
     "pptxgenjs": "^4.0.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

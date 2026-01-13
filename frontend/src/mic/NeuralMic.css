@@ -1,0 +1,88 @@
+/* --- NEURAL MIC CONTAINER (APPLE GLASS) --- */
+.neural-mic-container {
+    background: rgba(255, 255, 255, 0.72) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(209, 209, 214, 0.3); /* San Francisco Grey */
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.neural-mic-container.active {
+    background: rgba(255, 255, 255, 0.94) !important;
+    border: 1px solid rgba(0, 122, 255, 0.4); /* Apple Blue Border */
+    box-shadow: 0 20px 48px rgba(0, 122, 255, 0.12);
+    transform: translateY(-2px) scale(1.01);
+}
+
+/* --- AMBIENT BLUE GLOW --- */
+@keyframes apple-aura {
+    0% { transform: scale(0.85); opacity: 0; }
+    50% { transform: scale(1.1); opacity: 0.12; }
+    100% { transform: scale(1.4); opacity: 0; }
+}
+
+.mic-aura-white {
+    position: absolute;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, #007aff 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+    pointer-events: none;
+    animation: apple-aura 4s infinite ease-in-out;
+}
+
+/* --- INTERACTIVE MIC BUTTON --- */
+.mic-btn-base {
+    position: relative;
+    z-index: 2;
+    background: #f2f2f7;
+    border: 1.5px solid rgba(0, 0, 0, 0.02);
+    transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.mic-btn-active {
+    background: #007aff !important;
+    box-shadow: 0 10px 25px rgba(0, 122, 255, 0.45);
+    border-color: transparent;
+    transform: scale(1.05);
+}
+
+/* --- DYNAMIC WAVEFORM BARS --- */
+.wave-bars-container {
+    display: flex;
+    align-items: center;
+    gap: 3.5px;
+    height: 24px;
+}
+
+.wave-bar-pro {
+    width: 3px;
+    background: #ffffff;
+    border-radius: 4px;
+    animation: wave-pro 0.7s ease-in-out infinite;
+}
+
+@keyframes wave-pro {
+    0%, 100% { height: 6px; }
+    50% { height: 22px; }
+}
+
+/* Natural staggered animation delays */
+.wave-bar-pro:nth-child(1) { animation-delay: 0.15s; }
+.wave-bar-pro:nth-child(2) { animation-delay: 0.35s; }
+.wave-bar-pro:nth-child(3) { animation-delay: 0.1s; }
+.wave-bar-pro:nth-child(4) { animation-delay: 0.45s; }
+.wave-bar-pro:nth-child(5) { animation-delay: 0.25s; }
+
+/* --- TYPOGRAPHY & TEXT --- */
+.status-typing {
+    color: #1d1d1f;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.status-typing-active {
+    color: #007aff; /* Text turns blue when listening */
+}

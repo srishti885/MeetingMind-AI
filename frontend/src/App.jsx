@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react'; // useEffect optimized
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { jsPDF } from "jspdf";
 import pptxgen from "pptxgenjs";
 import emailjs from '@emailjs/browser'; 
 
-// Humari files ka import
+// Imports
 import { styles } from './Styles';
 import { RenderAppContent } from './ViewManager';
-import { startNeuralMic } from './NeuralMic';
+import MicView from './mic/MicView'; // <--- NEW UI COMPONENT IMPORTED
 import { syncToCalendar } from './CalendarEngine';
 
 function App() {
@@ -35,6 +35,10 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
 
+  // --- NEW STATES FOR SALES & MEDICAL MODE ---
+  const [selectedMode, setSelectedMode] = useState('general'); 
+  const [salesInsights, setSalesInsights] = useState(null);
+
   const [storage, setStorage] = useState([
     { id: 1, owner: 'admin@meetingmind.ai', name: 'Strategic Planning.mp3', date: '2026-01-05', summary: 'Discussion on Q1 goals and expansion into neural markets.', type: 'audio' },
     { id: 2, owner: 'srishti@test.com', name: 'UI Design Sync.wav', date: '2026-01-08', summary: 'Frontend architecture review regarding Llama 3.3 integration.', type: 'audio' }
@@ -48,45 +52,30 @@ function App() {
   // --- EMAIL SENDER LOGIC ---
   const sendEmail = (customSummary = summary) => {
     if (!customSummary) return alert("No summary to email!");
-    
     const templateParams = {
         to_name: userName,
         to_email: userEmail,
-        message: customSummary,
+        message: typeof customSummary === 'object' ? JSON.stringify(customSummary) : customSummary,
         action_items: actionItems.length > 0 
             ? actionItems.map(i => `${i.task} (Owner: ${i.owner})`).join("\n") 
             : "No specific tasks detected.",
         sentiment: sentiment.label || "Analyzed"
     };
-
     emailjs.send('service_fdkpqev', 'template_j6o09cf', templateParams)
-        .then(() => alert(`🚀 Success! Intelligence Report sent to ${userEmail}`))
-        .catch((err) => {
-            console.error("Email Error:", err);
-            alert("Email failed. Check console.");
-        });
+        .then(() => alert(`Success! Intelligence Report sent to ${userEmail}`))
+        .catch((err) => alert("Email failed. Check console."));
   };
 
   // --- PPT EXPORT LOGIC ---
   const downloadPPT = (content = summary) => {
     if (!content) return alert("No summary to export!");
     const pptx = new pptxgen();
-    
     const slide1 = pptx.addSlide();
     slide1.addText("Meeting Intelligence Report", { x: 1, y: 1, fontSize: 32, bold: true, color: '007AFF' });
-    slide1.addText(`Prepared for: ${userName}\nDate: ${new Date().toLocaleDateString()}`, { x: 1, y: 2, fontSize: 18 });
-
     const slide2 = pptx.addSlide();
     slide2.addText("Executive Summary", { x: 0.5, y: 0.5, fontSize: 24, bold: true, color: '007AFF' });
-    slide2.addText(content, { x: 0.5, y: 1.2, w: 9, h: 4, fontSize: 14, valign: 'top' });
-
-    if (actionItems.length > 0) {
-      const slide3 = pptx.addSlide();
-      slide3.addText("Neural Action Items", { x: 0.5, y: 0.5, fontSize: 24, bold: true, color: '007AFF' });
-      const list = actionItems.map(item => `• ${item.task} (${item.owner})`);
-      slide3.addText(list.join('\n\n'), { x: 0.5, y: 1.2, fontSize: 16 });
-    }
-
+    const textContent = typeof content === 'object' ? "Detailed Analysis in PDF/Email" : content;
+    slide2.addText(textContent, { x: 0.5, y: 1.2, w: 9, h: 4, fontSize: 14, valign: 'top' });
     pptx.writeFile({ fileName: `MeetingMind_Analysis_${Date.now()}.pptx` });
   };
 
@@ -115,55 +104,47 @@ function App() {
     setLoading(true);
     setProgress(10);
     const isVideo = file.type.includes('video');
-    setStatus(isVideo ? 'Neural Video Decoder Starting...' : 'Initializing Neural Engine...');
-    
+    setStatus(`Initializing ${selectedMode.toUpperCase()} Engine...`);
     try {
       const formData = new FormData();
       formData.append('audio', file);
-      
-      const res = await axios.post('http://localhost:5000/api/upload', formData, {
-        onUploadProgress: (p) => {
-          const baseProgress = Math.round((p.loaded * 100) / p.total);
-          setProgress(baseProgress * 0.5);
-        }
+      formData.append('mode', selectedMode); 
+      let endpoint = 'http://localhost:5000/api/upload'; 
+      if (selectedMode === 'sales') endpoint = 'http://localhost:5000/api/sales/upload';
+      else if (selectedMode === 'medical') endpoint = 'http://localhost:5000/api/medical/upload'; 
+
+      const res = await axios.post(endpoint, formData, {
+        onUploadProgress: (p) => setProgress(Math.round((p.loaded * 100) / p.total) * 0.5),
+        timeout: 300000 
       });
 
-      setSummary(res.data.summary);
+      setStatus('Finalizing Intelligence Report...');
       setTranscription(res.data.transcription);
-      setActionItems([
-        { id: 1, task: "Finalize UI Prototype", owner: "Product Team", status: "High Priority" },
-        { id: 2, task: "Client Presentation Review", owner: userName, status: "Pending" }
-      ]);
-      setSentiment({ score: 85, label: 'Highly Positive', color: '#2ecc71' });
+      if (selectedMode === 'sales') {
+        setSalesInsights(res.data.salesInsights);
+        setSummary(res.data.salesInsights);
+      } else if (selectedMode === 'medical') {
+        setSummary(res.data.medicalInsights);
+        setSalesInsights(null);
+      } else {
+        setSummary(res.data.summary);
+        setSalesInsights(null);
+      }
+      setActionItems(res.data.actionItems || [{ id: 1, task: `Review ${selectedMode.toUpperCase()} Analysis`, owner: userName, status: "High Priority" }]);
+      setSentiment(res.data.sentiment || { score: 85, label: 'Analyzed', color: '#007aff' });
       setProgress(100);
-      
-      const newEntry = {
-        id: Date.now(),
-        owner: userEmail || 'Guest',
-        name: file.name,
-        type: isVideo ? 'video' : 'audio',
-        date: new Date().toLocaleDateString(),
-        summary: res.data.summary
-      };
-      setStorage([newEntry, ...storage]);
       setStatus('AI Analysis Complete');
     } catch (err) { 
       setStatus('Interrupted: Connection Error');
       setProgress(0);
-      alert("Error: " + (err.response?.data?.message || "Server Timeout."));
+      alert("Error: " + (err.response?.data?.message || "Connection Issue."));
     } finally { 
       setTimeout(() => setLoading(false), 800); 
     }
   };
 
   const submitFeedback = () => {
-    const newFB = {
-      id: Date.now(),
-      user: userEmail,
-      rating: tempFeedback.rating,
-      comment: tempFeedback.comment,
-      date: new Date().toLocaleDateString()
-    };
+    const newFB = { id: Date.now(), user: userEmail, rating: tempFeedback.rating, comment: tempFeedback.comment, date: new Date().toLocaleDateString() };
     setFeedbacks([newFB, ...feedbacks]);
     alert("Feedback Submitted!");
     setTempFeedback({ rating: 5, comment: '' });
@@ -171,14 +152,12 @@ function App() {
 
   const downloadPDF = (content = summary) => {
     const doc = new jsPDF();
-    const splitText = doc.splitTextToSize(content, 180);
     doc.setFontSize(20);
-    doc.text("MeetingMind AI Intelligence Report", 20, 20);
-    doc.setFontSize(12);
-    doc.text(`Generated for: ${userName}`, 20, 30);
-    doc.text(`Sentiment: ${sentiment.label}`, 20, 40);
+    doc.text(`MeetingMind AI ${selectedMode.toUpperCase()} Report`, 20, 20);
+    const displayContent = typeof content === 'object' ? JSON.stringify(content, null, 2) : content;
+    const splitText = doc.splitTextToSize(displayContent, 180);
     doc.text(splitText, 20, 50);
-    doc.save("MeetingMind_Executive_Report.pdf");
+    doc.save(`MeetingMind_${selectedMode}_Report.pdf`);
   };
 
   // --- NAVBAR COMPONENT ---
@@ -192,11 +171,9 @@ function App() {
           MeetingMind <span style={{color: '#007aff'}}>AI</span>
         </div>
       </div>
-
       <div style={{ display: 'flex', gap: '30px', alignItems: 'center' }}>
           <span style={{...styles.navLinkStyle, color: currentView === 'home' ? '#007aff' : '#86868b'}} onClick={() => setCurrentView('home')}>Home</span>
           <span style={{...styles.navLinkStyle, color: currentView === 'about' ? '#007aff' : '#86868b'}} onClick={() => setCurrentView('about')}>About</span>
-          
           {isLoggedIn && (
             <>
               <span style={{...styles.navLinkStyle, color: currentView === 'workspace' ? '#007aff' : '#86868b'}} onClick={() => setCurrentView('workspace')}>Studio</span>
@@ -204,21 +181,13 @@ function App() {
               <span style={{...styles.navLinkStyle, color: currentView === 'contact' ? '#007aff' : '#86868b'}} onClick={() => setCurrentView('contact')}>Support</span>
             </>
           )}
-
           {isLoggedIn ? (
             <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '10px'}}>
               <div style={{textAlign: 'right'}}>
                 <div style={{fontSize: '13px', fontWeight: '700', color: '#1d1d1f'}}>{userName}</div>
                 <div style={{fontSize: '10px', color: '#007aff', fontWeight: 'bold'}}>{userRole?.toUpperCase()}</div>
               </div>
-              <div 
-                style={{
-                  width: '38px', height: '38px', borderRadius: '50%', background: '#f5f5f7', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', 
-                  fontWeight: 'bold', color: '#007aff', border: '1px solid #d2d2d7', cursor: 'pointer'
-                }}
-                onClick={handleLogout}
-              >
+              <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 'bold', color: '#007aff', border: '1px solid #d2d2d7', cursor: 'pointer' }} onClick={handleLogout}>
                 {userName.substring(0,1).toUpperCase()}
               </div>
             </div>
@@ -229,11 +198,26 @@ function App() {
     </nav>
   );
 
-  // --- MAIN RENDER ---
   return (
     <div style={{...styles.appContainerStyle, background: '#ffffff'}}>
       {loading && <div style={{...styles.progressBarStyle, width: `${progress}%`, height: '3px', position: 'fixed', top: 0, zIndex: 9999}} />}
       <Navbar />
+
+      {/* --- INTEGRATED MIC VIEW AT THE TOP OF STUDIO --- */}
+      {currentView === 'workspace' && (
+        <div style={{ padding: '20px 0', background: '#fbfbfd' }}>
+          <MicView 
+             isListening={isListening}
+             setIsListening={setIsListening}
+             status={status}
+             setStatus={setStatus}
+             setSummary={setSummary}
+             setCurrentView={setCurrentView}
+             setSentiment={setSentiment}
+             setActionItems={setActionItems}
+          />
+        </div>
+      )}
       
       <main style={{...styles.mainContentStyle, minHeight: '80vh'}}>
         <RenderAppContent 
@@ -241,10 +225,10 @@ function App() {
             currentView, isLoggedIn, authMode, setAuthMode, handleAuthAction,
             userName, userEmail, storage, setSummary, setCurrentView,
             downloadPDF, downloadPPT, sendEmail, file, handleFileChange, uploadAudio, loading,
-            status, sentiment, progress, summary, actionItems,
+            status, setStatus, sentiment, setSentiment, progress, summary, actionItems,
             tempFeedback, setTempFeedback, submitFeedback, feedbacks,
             searchQuery, setSearchQuery, isListening, setIsListening,
-            setActionItems 
+            setActionItems, selectedMode, setSelectedMode, salesInsights, transcription
           }} 
         />
       </main>
