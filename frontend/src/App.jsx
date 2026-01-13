@@ -109,9 +109,12 @@ function App() {
       const formData = new FormData();
       formData.append('audio', file);
       formData.append('mode', selectedMode); 
-      let endpoint = 'http://localhost:5000/api/upload'; 
-      if (selectedMode === 'sales') endpoint = 'http://localhost:5000/api/sales/upload';
-      else if (selectedMode === 'medical') endpoint = 'http://localhost:5000/api/medical/upload'; 
+      
+      // --- UPDATED ENDPOINT TO LIVE RENDER URL ---
+      const BASE_URL = 'https://meetingmind-ai-v9l2.onrender.com/api';
+      let endpoint = `${BASE_URL}/upload`; 
+      if (selectedMode === 'sales') endpoint = `${BASE_URL}/sales/upload`;
+      else if (selectedMode === 'medical') endpoint = `${BASE_URL}/medical/upload`; 
 
       const res = await axios.post(endpoint, formData, {
         onUploadProgress: (p) => setProgress(Math.round((p.loaded * 100) / p.total) * 0.5),
