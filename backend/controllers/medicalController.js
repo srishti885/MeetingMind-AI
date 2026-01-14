@@ -16,16 +16,21 @@ exports.handleMedicalUpload = async (req, res) => {
         writer.on('finish', async () => {
             try {
                 const text = await processTranscription(tempFile);
-                const medicalSummary = await analyzeMedicalMode(text); 
+                const medicalInsights = await analyzeMedicalMode(text); // AI breakdown
                 const sentiment = await analyzeSentiment(text);
                 
                 if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
 
+                // Frontend ke mutabiq response keys:
                 res.json({ 
                     transcription: text, 
-                    summary: medicalSummary, 
+                    medicalInsights: medicalInsights, // Frontend isi key ko read karta hai
+                    summary: medicalInsights,         // Backup key
                     sentiment: sentiment,
-                    status: "Medical Analysis Complete"
+                    status: "Success",
+                    actionItems: [
+                        { id: 1, task: "Review Medical Report", owner: "Doctor", status: "High Priority" }
+                    ]
                 });
             } catch (error) {
                 if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);

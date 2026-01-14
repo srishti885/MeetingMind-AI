@@ -14,8 +14,10 @@ export const RenderAppContent = (props) => {
         status, setStatus, sentiment, setSentiment, progress, summary, actionItems,
         tempFeedback, setTempFeedback, submitFeedback, feedbacks,
         isListening, setIsListening, setActionItems,
-        selectedMode, setSelectedMode, salesInsights 
+        selectedMode, setSelectedMode, salesInsights,
+        medicalInsights // <--- SIRF YEH EK LINE ADD KI HAI (ERROR FIX)
     } = props;
+
 
     const { 
         pagePadding, badgeStyle, mainTitleStyle, contentCard, 
@@ -361,129 +363,118 @@ export const RenderAppContent = (props) => {
           </div>
         );
         case 'workspace':
-        const summaryData = {
-            general: "Neural Studio is ready. No intelligence report generated yet.",
-            sales: "Sales Pipeline PRO is active. Waiting for lead analysis...",
-            medical: "Medical Intelligence Engine standby. Ready for clinical analysis..."
-        };
-        const actionItemsData = {
-            general: [],
-            sales: [],
-            medical: []
-        };   
-        
-        const currentSummary = summaryData[selectedMode] || "No data available"; 
-        const currentActions = actionItemsData[selectedMode] || [];
+    // --- 1. Helper: Calendar Sync Logic ---
+    const syncToCalendar = (task) => {
+        const taskText = task?.task || task || "New Task from MeetingMind AI";
+        const title = encodeURIComponent(taskText);
+        window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${title}`, '_blank');
+    };
 
-        return (
-            <div style={pagePadding}>
-                <div style={studioWrapperStyle}>
-                    
-                    {/* --- SECTION 1: HEADER --- */}
-                    <div style={{ textAlign: 'center', marginBottom: '45px' }}>
-                        <div style={{ ...badgeStyle, background: 'rgba(0, 122, 255, 0.08)', color: '#007aff', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                            {selectedMode.toUpperCase()} INTELLIGENCE ACTIVE
-                        </div>
-                        <h2 style={{ fontSize: '38px', fontWeight: '900', color: '#1d1d1f', marginTop: '15px' }}>
-                            {selectedMode === 'sales' ? 'Sales Pipeline PRO' : selectedMode === 'medical' ? 'Med-Neural Assistant' : 'Neural Studio PRO'}
-                        </h2>
-                        <div style={{ marginTop: '25px', display: 'flex', justifyContent: 'center' }}>
-                            <ModeSelector selectedMode={selectedMode} setSelectedMode={setSelectedMode} />
+    // --- 2. THE FIX: Safety Check for Data ---
+    const getActiveReport = () => {
+        const safeTranscription = typeof transcription !== 'undefined' ? transcription : "";
+        const report = summary || salesInsights || safeTranscription;
+        if (!report) return null;
+        return typeof report === 'object' ? JSON.stringify(report, null, 2) : report;
+    };
+
+    const currentSummary = getActiveReport() || "Neural Studio is ready. No intelligence report generated yet.";
+    const currentActions = actionItems || [];
+
+    return (
+        <div style={pagePadding}>
+            <div style={studioWrapperStyle}>
+                
+                {/* --- HEADER --- */}
+                <div style={{ textAlign: 'center', marginBottom: '45px' }}>
+                    <div style={{ ...badgeStyle, background: 'rgba(0, 122, 255, 0.08)', color: '#007aff', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        {selectedMode.toUpperCase()} INTELLIGENCE ACTIVE
+                    </div>
+                    <h2 style={{ fontSize: '38px', fontWeight: '900', color: '#1d1d1f', marginTop: '15px' }}>
+                        {selectedMode === 'sales' ? 'Sales Pipeline PRO' : selectedMode === 'medical' ? 'Med-Neural Assistant' : 'Neural Studio PRO'}
+                    </h2>
+                    <div style={{ marginTop: '25px', display: 'flex', justifyContent: 'center' }}>
+                        <ModeSelector selectedMode={selectedMode} setSelectedMode={setSelectedMode} />
+                    </div>
+                </div>
+
+                {/* --- SMART UPLOAD ZONE (Icons Back!) --- */}
+                {!loading && (
+                    <div style={{ width: '100%', maxWidth: '850px', margin: '0 auto' }}>
+                        <div style={{ background: '#ffffff', padding: '40px', borderRadius: '32px', border: '1px solid #e5e5e5', boxShadow: '0 20px 40px rgba(0,0,0,0.04)' }}>
+                            <h4 style={{ textAlign: 'center', marginBottom: '25px', fontSize: '14px', fontWeight: '700', color: '#86868b', letterSpacing: '1px' }}>SELECT SOURCE</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
+                                
+                                <label htmlFor="audioIn" style={{ cursor: 'pointer', padding: '30px', borderRadius: '20px', border: file?.type?.includes('audio') ? '2px solid #007aff' : '1.5px dashed #d2d2d7', background: '#fcfcfc', textAlign: 'center' }}>
+                                    <input type="file" accept="audio/*" onChange={handleFileChange} id="audioIn" style={{ display: 'none' }} />
+                                    {/* Audio Icon */}
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '12px' }}><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                                    <div style={{ fontWeight: '700', color: '#1d1d1f' }}>Audio Record</div>
+                                </label>
+
+                                <label htmlFor="videoIn" style={{ cursor: 'pointer', padding: '30px', borderRadius: '20px', border: file?.type?.includes('video') ? '2px solid #007aff' : '1.5px dashed #d2d2d7', background: '#fcfcfc', textAlign: 'center' }}>
+                                    <input type="file" accept="video/*" onChange={handleFileChange} id="videoIn" style={{ display: 'none' }} />
+                                    {/* Video Icon */}
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '12px' }}><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                                    <div style={{ fontWeight: '700', color: '#1d1d1f' }}>Video Feed</div>
+                                </label>
+                            </div>
+                            <button onClick={uploadAudio} disabled={!file} style={{ width: '100%', height: '60px', background: file ? '#1d1d1f' : '#e5e5e5', color: 'white', borderRadius: '16px', fontWeight: '700', border: 'none', cursor: file ? 'pointer' : 'not-allowed' }}>
+                                Analyze {selectedMode.toUpperCase()} File
+                            </button>
                         </div>
                     </div>
+                )}
 
-                    {/* --- SECTION 2: SMART UPLOAD ZONE --- */}
-                    {!loading && (
-                        <div style={{ width: '100%', maxWidth: '850px', margin: '0 auto' }}>
-                            <div style={{ background: '#ffffff', padding: '40px', borderRadius: '32px', border: '1px solid #e5e5e5', boxShadow: '0 20px 40px rgba(0,0,0,0.04)' }}>
-                                <h4 style={{ textAlign: 'center', marginBottom: '25px', fontSize: '14px', fontWeight: '700', color: '#86868b', letterSpacing: '1px' }}>SELECT SOURCE FOR ANALYSIS</h4>
-                                
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
-                                    
-                                    {/* Audio Upload Card */}
-                                    <label htmlFor="audioIn" style={{ 
-                                        cursor: 'pointer', padding: '30px', borderRadius: '20px', border: file?.type?.includes('audio') ? '2px solid #007aff' : '1.5px dashed #d2d2d7',
-                                        background: file?.type?.includes('audio') ? '#f5faff' : '#fcfcfc', textAlign: 'center', transition: 'all 0.2s'
-                                    }}>
-                                        <input type="file" accept="audio/*" onChange={handleFileChange} id="audioIn" style={{ display: 'none' }} />
-                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={file?.type?.includes('audio') ? "#007aff" : "#86868b"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '12px' }}><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                                        <div style={{ fontWeight: '700', fontSize: '15px', color: '#1d1d1f' }}>Audio Record</div>
-                                    </label>
-
-                                    {/* Video Feed Card */}
-                                    <label htmlFor="videoIn" style={{ 
-                                        cursor: 'pointer', padding: '30px', borderRadius: '20px', border: file?.type?.includes('video') ? '2px solid #007aff' : '1.5px dashed #d2d2d7',
-                                        background: file?.type?.includes('video') ? '#f5faff' : '#fcfcfc', textAlign: 'center', transition: 'all 0.2s'
-                                    }}>
-                                        <input type="file" accept="video/*" onChange={handleFileChange} id="videoIn" style={{ display: 'none' }} />
-                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={file?.type?.includes('video') ? "#007aff" : "#86868b"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '12px' }}><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                                        <div style={{ fontWeight: '700', fontSize: '15px', color: '#1d1d1f' }}>Video Feed</div>
-                                    </label>
-                                </div>
-
-                                <button onClick={uploadAudio} disabled={!file} style={{ 
-                                    width: '100%', height: '60px', background: file ? '#1d1d1f' : '#e5e5e5', color: 'white', 
-                                    borderRadius: '16px', fontWeight: '700', fontSize: '16px', cursor: file ? 'pointer' : 'not-allowed',
-                                    border: 'none', transition: 'all 0.3s'
-                                }}>
-                                    Analyze {selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)} File
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* --- SECTION 3: RESULTS & LOADING --- */}
-                    {(loading || (currentSummary && !loading)) && (
-                        <div style={{ width: '100%', maxWidth: '1100px', margin: '40px auto 0' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: (!loading && selectedMode === 'general') ? '1fr 350px' : '1fr', gap: '30px' }}>
-                                
-                                <div style={summaryContentStyle}>
-                                    <h3 style={{ color: '#007aff', fontWeight: '800', marginBottom: '20px' }}>AI Insight Report</h3>
-
-                                    {loading ? (
-                                        <div style={{ padding: '40px 0', textAlign: 'center' }}>
-                                            <p style={{ color: '#86868b', fontWeight: '600' }}>Neural Engine is processing...</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div style={{ whiteSpace: 'pre-wrap', color: '#1d1d1f', lineHeight: '1.7' }}>{currentSummary}</div>
-                                            
-                                            {/* Action Buttons with Email included */}
-                                            <div style={{ display: 'flex', gap: '12px', marginTop: '30px', borderTop: '1px solid #f2f2f2', paddingTop: '25px' }}>
-                                                <button style={pdfButtonStyle} onClick={() => downloadPDF(currentSummary)}>PDF</button>
-                                                <button style={heroButtonStyleSmall} onClick={() => downloadPPT(currentSummary)}>Slides</button>
-                                                <button 
-                                                    style={{ ...heroButtonStyleSmall, background: '#5856d6', display: 'flex', alignItems: 'center', gap: '8px' }} 
-                                                    onClick={() => {
-                                                        const email = prompt("Recipient email:");
-                                                        if(email) sendSummaryEmail(email, currentSummary);
-                                                    }}>
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                                                    Email
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-
-                                {selectedMode === 'general' && !loading && (
-                                    <div style={calendarSyncCard}>
-                                        <h4 style={{ fontSize: '15px', fontWeight: '800', marginBottom: '20px' }}>Tasks Detected</h4>
-                                        {currentActions?.map((item, i) => (
-                                            <div key={i} style={taskItemStyle}><p style={{ margin: 0 }}>{item.task}</p></div>
-                                        ))}
+                {/* --- RESULTS SECTION (PPT Button Back!) --- */}
+                {(loading || (currentSummary && !loading)) && (
+                    <div style={{ width: '100%', maxWidth: '1100px', margin: '40px auto 0' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: (!loading && (currentActions.length > 0)) ? '1fr 350px' : '1fr', gap: '30px' }}>
+                            <div style={summaryContentStyle}>
+                                <h3 style={{ color: '#007aff', fontWeight: '800', marginBottom: '20px' }}>AI Insight Report</h3>
+                                {loading ? (
+                                    <div style={{ padding: '40px 0', textAlign: 'center' }}>
+                                        <p style={{ color: '#86868b', fontWeight: '600' }}>{status || 'Neural Engine is processing...'}</p>
                                     </div>
+                                ) : (
+                                    <>
+                                        <div style={{ whiteSpace: 'pre-wrap', color: '#1d1d1f', lineHeight: '1.7', fontSize: '15px' }}>{currentSummary}</div>
+                                        <div style={{ display: 'flex', gap: '12px', marginTop: '30px', borderTop: '1px solid #f2f2f2', paddingTop: '25px' }}>
+                                            <button style={pdfButtonStyle} onClick={() => downloadPDF(currentSummary)}>PDF</button>
+                                            <button style={heroButtonStyleSmall} onClick={() => downloadPPT(currentSummary)}>Slides</button>
+                                            <button 
+                                                style={{ ...heroButtonStyleSmall, background: '#5856d6', display: 'flex', alignItems: 'center', gap: '8px' }} 
+                                                onClick={() => sendEmail(currentSummary)}>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                                Email
+                                            </button>
+                                        </div>
+                                    </>
                                 )}
                             </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
 
-        
-        
+                            {/* Sidebar Tasks */}
+                            {(!loading && currentActions.length > 0) && (
+                                <div style={calendarSyncCard}>
+                                    <h4 style={{ fontSize: '15px', fontWeight: '800', marginBottom: '20px' }}>Tasks Detected</h4>
+                                    {currentActions.map((item, i) => (
+                                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#fcfcfc', borderRadius: '12px', marginBottom: '8px', border: '1px solid #f0f0f0' }}>
+                                            <p style={{ margin: 0, fontSize: '13px', flex: 1 }}>{item.task || item}</p>
+                                            <button onClick={() => syncToCalendar(item)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#007aff' }}>
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+                
         default:
             return null;
       }

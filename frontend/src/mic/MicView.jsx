@@ -10,7 +10,8 @@ const MicView = ({
     setSummary, 
     setCurrentView, 
     setSentiment, 
-    setActionItems 
+    setActionItems,
+    selectedMode // Humne ye prop yahan add kiya hai
 }) => {
     return (
         <div className={`neural-mic-container ${isListening ? 'active' : ''}`} 
@@ -44,7 +45,16 @@ const MicView = ({
                             stopNeuralMic();
                             setIsListening(false);
                         } else {
-                            startNeuralMic(setIsListening, setStatus, setSummary, setCurrentView, setSentiment, setActionItems);
+                            // UPDATE: Ab ye selectedMode bhi pass karega (Logic preserved)
+                            startNeuralMic(
+                                setIsListening, 
+                                setStatus, 
+                                setSummary, 
+                                setCurrentView, 
+                                setSentiment, 
+                                setActionItems,
+                                selectedMode // Backend ko mode batane ke liye
+                            );
                         }
                     }}
                     className={isListening ? "mic-btn-active" : "mic-btn-idle"}

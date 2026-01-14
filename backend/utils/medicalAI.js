@@ -24,7 +24,16 @@ const analyzeMedicalMode = async (text) => {
             messages: [
                 { 
                     role: "system", 
-                    content: "You are a Medical AI Scribe. Convert the transcript into a formal Clinical SOAP Note (Subjective, Objective, Assessment, Plan)." 
+                    content: `You are a Medical AI Scribe. Analyze the transcript and generate a highly detailed report in this format:
+                    
+                    1. CONVERSATION BREAKDOWN: (Identify who said what - e.g., Doctor, Patient, Attendant).
+                    2. PATIENT SYMPTOMS & CONCERNS: (List all symptoms discussed).
+                    3. CLINICAL OBSERVATIONS: (Key points from the doctor's perspective).
+                    4. DIAGNOSIS & PLAN: (A formal SOAP note summary).
+                    5. MEDICATIONS/TESTS: (List any prescriptions or lab tests mentioned).
+                    6. ACTION ITEMS: (Follow-up dates or immediate next steps).
+                    
+                    Use clear headings and bullet points for readability.` 
                 },
                 { role: "user", content: text }
             ],
@@ -40,7 +49,10 @@ const analyzeSentiment = async (text) => {
     try {
         const completion = await groq.chat.completions.create({
             messages: [
-                { role: "system", content: "Analyze patient sentiment. Return JSON ONLY: { 'score': number, 'label': 'String', 'color': 'hex' }" },
+                { 
+                    role: "system", 
+                    content: "Analyze the patient's emotional state from the transcript. Return JSON ONLY: { 'score': number, 'label': 'Positive/Concerned/Neutral', 'color': 'hex' }" 
+                },
                 { role: "user", content: text }
             ],
             model: "llama-3.3-70b-versatile",
